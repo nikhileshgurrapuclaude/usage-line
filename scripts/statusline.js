@@ -3,36 +3,48 @@
 // status line refreshes (new message, /compact, mode change, etc).
 // Runs locally — no API tokens consumed.
 
-let input = '';
-process.stdin.on('data', chunk => { input += chunk; });
-process.stdin.on('end', () => {
+let input = "";
+process.stdin.on("data", (chunk) => {
+  input += chunk;
+});
+process.stdin.on("end", () => {
   let data;
   try {
     data = JSON.parse(input);
   } catch (e) {
-    console.log('');
+    console.log("");
     return;
   }
 
-  const RESET = '\x1b[0m';
-  const GREEN = '\x1b[32m';
-  const YELLOW = '\x1b[33m';
-  const RED = '\x1b[31m';
-  const CYAN = '\x1b[36m';
+  const RESET = "\x1b[0m";
+  const GREEN = "\x1b[32m";
+  const YELLOW = "\x1b[33m";
+  const RED = "\x1b[31m";
+  const CYAN = "\x1b[36m";
 
-  const model = data.model?.display_name || '?';
+  const model = data.model?.display_name || "?";
   const pct = Math.floor(data.context_window?.used_percentage ?? 0);
   const cost = data.cost?.total_cost_usd ?? 0;
   const fiveH = data.rate_limits?.five_hour?.used_percentage;
   const week = data.rate_limits?.seven_day?.used_percentage;
 
+  // Raw token counts: what's used right now vs. how much room is left
+  const totalInput = data.context_window?.total_input_tokens ?? 0;
+  const totalOutput = data.context_window?.total_output_tokens ?? 0;
+  const usedTokens = totalInput + totalOutput;
+  const windowSize = data.context_window?.context_window_size ?? 200000;
+  const remainingTokens = Math.max(windowSize - usedTokens, 0);
+
+  const fmt = (n) =>
+    n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "k" : String(n);
+
   // Context usage progress bar, color-coded
   const barWidth = 10;
   const filled = Math.floor((pct * barWidth) / 100);
-  const bar = '▓'.repeat(filled) + '░'.repeat(barWidth - filled);
+  const bar = "▓".repeat(filled) + "░".repeat(barWidth - filled);
   const barColor = pct >= 90 ? RED : pct >= 70 ? YELLOW : GREEN;
 
-  let line = `${CYAN}[${model}]${RESET} ${barColor}${bar}${RESET} ${pct}% ctx | $${cost.toFixed(2)}`;
+  let line = `${CYAN}[${model}]${RESET} ${barColor}${bar}${RESET} ${pct}% (${fmt(usedTokens)}/${fmt(windowSize)}, ${fmt(remainingTokens)} left) | $${cost.toFixed(2)}`;
 
   const limitParts = [];
   if (fiveH != null) {
@@ -44,7 +56,7 @@ process.stdin.on('end', () => {
     limitParts.push(`${color}7d:${Math.round(week)}%${RESET}`);
   }
   if (limitParts.length) {
-    line += ` | ${limitParts.join(' ')}`;
+    line += ` | ${limitParts.join(" ")}`;
   }
 
   console.log(line);
