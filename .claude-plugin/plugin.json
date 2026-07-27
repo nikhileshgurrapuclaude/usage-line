@@ -1,7 +1,7 @@
 {
   "name": "usage-line",
   "displayName": "Usage Line",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Always-on status line showing model, context window %, session cost, and 5h/7d rate-limit usage. Configures itself automatically on first run — no settings.json editing required.",
   "author": {
     "name": "Nikhilesh"
